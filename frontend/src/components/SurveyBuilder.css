@@ -1,0 +1,98 @@
+/* frontend/src/components/SurveyBuilder.css */
+
+/* Compact & Branded Overrides for SurveyJS Creator v2 */
+.svc-creator, .sd-root-modern, .sd-root-defaultV2 {
+  /* Scale down the entire UI padding/margins */
+  --sjs-base-unit: 6px !important; 
+  
+  /* Brand Colors */
+  --sjs-primary-backcolor: #7f0df2 !important;
+  --sjs-primary-backcolor-light: #f3e8ff !important;
+  --sjs-primary-backcolor-dark: #6b0bc6 !important;
+  --sjs-secondary-backcolor: #7f0df2 !important;
+  
+  /* Font Families */
+  --sjs-font-family: "Inter", system-ui, sans-serif !important;
+  --sjs-font-editorfont-family: "Inter", system-ui, sans-serif !important;
+  
+  /* Font Sizes - Making them smaller */
+  --sjs-font-size: 13px !important;
+  --sjs-font-questiontitle-size: 14px !important;
+  --sjs-font-questiontitle-weight: 700 !important;
+  --sjs-font-questiondescription-size: 11px !important;
+  --sjs-font-surveytitle-size: 20px !important;
+  --sjs-font-surveytitle-weight: 800 !important;
+  --sjs-font-headertitle-size: 14px !important;
+  --sjs-font-pagetitle-size: 16px !important;
+  
+  /* Border Radii for modern look */
+  --sjs-corner-radius: 8px !important;
+}
+
+/* Force global fonts inside Survey Builder */
+.svc-creator * {
+  font-family: var(--sjs-font-family);
+}
+
+/* Toolbox text sizing */
+.svc-toolbox__item-text {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.svc-toolbox__category-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Properties panel sizing */
+.svc-properties-wrapper {
+  background-color: #f8fafc !important;
+}
+
+.svc-property-panel__header {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+}
+
+.svc-string-editor__content {
+  font-size: 12px !important;
+}
+
+.svc-text-input {
+  font-size: 12px !important;
+}
+
+.svc-question-link__title {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Save / Top header tab sizing */
+.svc-tabbed-menu-item__text {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+/* Remove excessive spacing in the canvas */
+.sd-page {
+  padding: var(--sjs-base-unit) !important;
+}
+
+.sd-question {
+  padding-top: calc(2 * var(--sjs-base-unit)) !important;
+  padding-bottom: calc(2 * var(--sjs-base-unit)) !important;
+}
+
+/* Hide SurveyJS License Banner */
+.svc-creator__banner,
+.svc-creator__non-commercial-text,
+.sd-body__banner,
+.svc-creator__license-text,
+div[class*="license-banner"],
+div[class*="commercial-banner"] {
+  display: none !important;
+}

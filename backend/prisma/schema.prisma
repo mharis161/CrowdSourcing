@@ -1,0 +1,178 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  avatar       String?
+  balance      Float    @default(0.0)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  company      Company?
+  assignments  TaskAssignment[]
+  transactions Transaction[]
+  notifications Notification[]
+}
+
+enum Role {
+  PARTICIPANT
+  COMPANY
+  ADMIN
+}
+
+model Company {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  companyName      String
+  description      String?
+  industry         String?
+  country          String?  @default("Pakistan")
+  subscriptionPlan Plan     @default(FREE)
+  tasks            Task[]
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model Task {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  title           String
+  description     String
+  type            TaskType
+  reward          Float
+  maxParticipants Int
+  status          TaskStatus @default(DRAFT)
+  deadline        DateTime?
+  surveyConfig    Json?
+  createdAt       DateTime @default(now())
+  
+  locations       TaskLocation[]
+  questions       TaskQuestion[]
+  assignments     TaskAssignment[]
+}
+
+model TaskLocation {
+  id           String   @id @default(uuid())
+  task         Task     @relation(fields: [taskId], references: [id])
+  taskId       String
+  locationName String?
+  latitude     Float
+  longitude    Float
+  radius       Float
+  createdAt    DateTime @default(now())
+}
+
+enum TaskType {
+  SURVEY
+  DATA_ENTRY
+  REVIEW
+}
+
+enum TaskStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model TaskQuestion {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  question  String
+  type      QuestionType
+  options   Json?    // Optional JSON array for MCQ options
+  order     Int
+
+  responses TaskResponse[]
+}
+
+enum QuestionType {
+  MCQ
+  TEXT
+  RATING
+  BOOLEAN
+}
+
+model TaskAssignment {
+  id            String   @id @default(cuid())
+  taskId        String
+  task      Task     @relation(fields: [taskId], references: [id])
+  participantId String
+  participant   User     @relation(fields: [participantId], references: [id])
+  status        AssignmentStatus @default(IN_PROGRESS)
+  reward        Float
+  submittedAt   DateTime?
+  validatedAt   DateTime?
+
+  responses     TaskResponse[]
+
+  @@unique([taskId, participantId])
+}
+
+enum AssignmentStatus {
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model TaskResponse {
+  id           String   @id @default(cuid())
+  assignmentId String
+  assignment   TaskAssignment @relation(fields: [assignmentId], references: [id])
+  questionId   String
+  question     TaskQuestion   @relation(fields: [questionId], references: [id])
+  answer       String
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Float
+  type      TxnType
+  status    TxnStatus @default(PENDING)
+  createdAt DateTime @default(now())
+}
+
+enum TxnType {
+  REWARD
+  WITHDRAWAL
+  FEE
+  SUBSCRIPTION
+}
+
+enum TxnStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
