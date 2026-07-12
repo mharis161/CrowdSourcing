@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Network, X, Briefcase, Wallet, ShieldCheck, Lock, Shield, ArrowRight, User, Mail, Building2, CheckCircle2 } from 'lucide-react';
+import { Network, X, Briefcase, Wallet, ShieldCheck, Lock, Shield, ArrowRight, User, Mail, Building2, CheckCircle2, Globe } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import api from '../api/axios';
 import { useAuthStore } from '../store/useAuthStore';
