@@ -67,7 +67,11 @@ const SurveyBuilder = ({ initialJson, onSave, onClose }) => {
     return c;
   }, []); // Initialize only once on mount
 
-  const validateSurveyData = (jsonObj) => {
+  // Mutates jsonObj in place: converts plain-text choices (e.g. "A") into
+  // explicit { value, text } pairs so downstream data parsing always has a
+  // stable value distinct from the display label. Still errors on choices
+  // that end up with no usable value (e.g. an empty string).
+  const normalizeSurveyData = (jsonObj) => {
     if (!jsonObj) return null;
     let error = null;
     const nameSet = new Set(); // For unique name validation
@@ -84,16 +88,13 @@ const SurveyBuilder = ({ initialJson, onSave, onClose }) => {
         }
 
         if (['radiogroup', 'checkbox', 'dropdown', 'imagepicker'].includes(el.type) && el.choices) {
+          el.choices = el.choices.map((choice) =>
+            typeof choice === 'string' ? { value: choice, text: choice } : choice
+          );
           for (const choice of el.choices) {
-            // Ensure choice is strictly an object and has a value
-            if (typeof choice === 'string') {
-              error = `Question "${el.name}" has simple text choices (e.g., "${choice}"). Please edit the choices to explicitly set both 'Value' and 'Text' to help with data parsing.`;
+            if (choice.value === undefined || choice.value === null || String(choice.value).trim() === '') {
+              error = `Question "${el.name}" has a choice missing a 'Value'. Value properties are compulsory.`;
               return;
-            } else if (typeof choice === 'object') {
-              if (choice.value === undefined || choice.value === null || String(choice.value).trim() === '') {
-                error = `Question "${el.name}" has a choice missing a 'Value'. Value properties are compulsory.`;
-                return;
-              }
             }
           }
         }
@@ -114,14 +115,15 @@ const SurveyBuilder = ({ initialJson, onSave, onClose }) => {
 
   useEffect(() => {
     // Custom save action
-    creator.saveSurveyFunc = (saveNo, callback) => { 
-      const validationError = validateSurveyData(creator.JSON);
+    creator.saveSurveyFunc = (saveNo, callback) => {
+      const json = creator.JSON;
+      const validationError = normalizeSurveyData(json);
       if (validationError) {
         showToast(validationError, 'error');
         callback(saveNo, false);
         return;
       }
-      onSave(creator.JSON);
+      onSave(json);
 
       callback(saveNo, true);
     };
@@ -155,16 +157,17 @@ const SurveyBuilder = ({ initialJson, onSave, onClose }) => {
             <X className="w-4 h-4" />
             Cancel
           </button>
-          <button 
+          <button
             onClick={() => {
-              const validationError = validateSurveyData(creator.JSON);
+              const json = creator.JSON;
+              const validationError = normalizeSurveyData(json);
               if (validationError) {
                 showToast(validationError, 'error');
                 return;
               }
-              onSave(creator.JSON);
+              onSave(json);
 
-            }} 
+            }}
             className="px-6 h-10 bg-[#7f0df2] hover:bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg shadow-purple-500/20 flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
