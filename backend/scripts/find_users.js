@@ -1,4 +1,4 @@
-import prisma from './lib/prisma.js';
+import prisma from '../lib/prisma.js';
 async function main() {
   const users = await prisma.user.findMany();
   console.log('Registered Users:');
