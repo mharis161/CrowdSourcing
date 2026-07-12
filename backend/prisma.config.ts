@@ -7,6 +7,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: "postgresql://postgres:Feroze%401888@localhost:5432/crowdforge",
+    url: process.env.DATABASE_URL,
   },
 });
