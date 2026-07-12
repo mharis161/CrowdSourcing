@@ -58,6 +58,8 @@ const CompanyDashboard = () => {
   
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm();
   const taskType = watch('type', 'SURVEY');
+  const watchedReward = watch('reward');
+  const watchedMaxParticipants = watch('maxParticipants');
   const showToast = useToastStore(state => state.showToast);
 
 
@@ -458,13 +460,19 @@ const CompanyDashboard = () => {
                       {errors.reward && <span className="text-red-500 text-[10px] font-bold">{errors.reward.message}</span>}
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Capacity</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Responses</label>
                       <input {...register('maxParticipants', { required: 'Required', min: 1 })} type="number" className={`w-full h-12 bg-white border ${errors.maxParticipants ? 'border-red-400' : 'border-slate-200'} rounded-xl px-4 text-xs font-bold outline-none shadow-sm`} placeholder="00" />
                       {errors.maxParticipants && <span className="text-red-500 text-[10px] font-bold">{errors.maxParticipants.message}</span>}
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deadline</label>
                       <input {...register('deadline')} type="date" className="w-full h-12 bg-white border border-slate-200 rounded-xl px-4 text-xs font-bold outline-none cursor-pointer shadow-sm" />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Budget</label>
+                      <div className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 flex items-center text-sm font-black text-slate-900">
+                        {formatCurrency((Number(watchedReward) || 0) * (Number(watchedMaxParticipants) || 0), user?.company?.country)}
+                      </div>
                     </div>
                   </div>
                   
