@@ -58,8 +58,11 @@ const CompanyDashboard = () => {
   
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm();
   const taskType = watch('type', 'SURVEY');
-  const watchedReward = watch('reward');
+  const watchedBudget = watch('budget');
   const watchedMaxParticipants = watch('maxParticipants');
+  const rewardPerResponse = (Number(watchedMaxParticipants) || 0) > 0
+    ? (Number(watchedBudget) || 0) / Number(watchedMaxParticipants)
+    : 0;
   const showToast = useToastStore(state => state.showToast);
 
 
@@ -100,7 +103,7 @@ const CompanyDashboard = () => {
         title: freshTask.title,
         description: freshTask.description,
         type: freshTask.type,
-        reward: freshTask.reward,
+        budget: freshTask.reward * freshTask.maxParticipants,
         maxParticipants: freshTask.maxParticipants,
         deadline: freshTask.deadline ? new Date(freshTask.deadline).toISOString().split('T')[0] : ''
       });
@@ -117,7 +120,7 @@ const CompanyDashboard = () => {
 
   const handleOpenNewModal = () => {
     setEditingTaskId(null);
-    reset({ title: '', description: '', type: 'SURVEY', reward: '', maxParticipants: '', deadline: '' });
+    reset({ title: '', description: '', type: 'SURVEY', budget: '', maxParticipants: '', deadline: '' });
     setLocations([]);
     setSurveyConfig(null);
     setIsModalOpen(true);
@@ -125,8 +128,10 @@ const CompanyDashboard = () => {
 
   const onSubmit = async (data) => {
     try {
-      const payload = { ...data, locations, surveyConfig };
-      
+      const { budget, ...rest } = data;
+      const reward = Number(budget) / Number(data.maxParticipants);
+      const payload = { ...rest, reward, locations, surveyConfig };
+
       if (editingTaskId) {
         await api.put(`/tasks/${editingTaskId}`, payload);
         showToast('Project updated successfully!', 'success');
@@ -455,9 +460,9 @@ const CompanyDashboard = () => {
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-[#7f0df2] uppercase tracking-widest pl-1">Reward ({currencyInfo.symbol})</label>
-                      <input {...register('reward', { required: 'Required', min: 0.01 })} type="number" step="0.01" className={`w-full h-12 bg-white border ${errors.reward ? 'border-red-400' : 'border-slate-200'} rounded-xl px-4 text-xs font-black text-slate-900 outline-none shadow-sm`} placeholder="0.00" />
-                      {errors.reward && <span className="text-red-500 text-[10px] font-bold">{errors.reward.message}</span>}
+                      <label className="text-[10px] font-black text-[#7f0df2] uppercase tracking-widest pl-1">Total Budget ({currencyInfo.symbol})</label>
+                      <input {...register('budget', { required: 'Required', min: 0.01 })} type="number" step="0.01" className={`w-full h-12 bg-white border ${errors.budget ? 'border-red-400' : 'border-slate-200'} rounded-xl px-4 text-xs font-black text-slate-900 outline-none shadow-sm`} placeholder="0.00" />
+                      {errors.budget && <span className="text-red-500 text-[10px] font-bold">{errors.budget.message}</span>}
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Responses</label>
@@ -468,10 +473,10 @@ const CompanyDashboard = () => {
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deadline</label>
                       <input {...register('deadline')} type="date" className="w-full h-12 bg-white border border-slate-200 rounded-xl px-4 text-xs font-bold outline-none cursor-pointer shadow-sm" />
                     </div>
-                    <div className="space-y-1.5 col-span-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Budget</label>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Reward Per Response</label>
                       <div className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 flex items-center text-sm font-black text-slate-900">
-                        {formatCurrency((Number(watchedReward) || 0) * (Number(watchedMaxParticipants) || 0), user?.company?.country)}
+                        {formatCurrency(rewardPerResponse, user?.company?.country)}
                       </div>
                     </div>
                   </div>
