@@ -146,9 +146,9 @@ export const getTaskById = async (req, res) => {
   try {
     const { id } = req.params;
     const task = await prisma.task.findFirst({
-      where: { 
-        id, 
-        companyId: req.user.company.id 
+      where: {
+        id,
+        companyId: req.user.company.id
       },
       include: { locations: true }
     });
@@ -161,6 +161,40 @@ export const getTaskById = async (req, res) => {
   } catch (error) {
     console.error('Get task by id error:', error);
     res.status(500).json({ message: 'Server error while fetching task' });
+  }
+};
+
+export const getTaskResponses = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verify task belongs to this company
+    const task = await prisma.task.findFirst({
+      where: { id, companyId: req.user.company.id }
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const assignments = await prisma.taskAssignment.findMany({
+      where: { taskId: id },
+      include: { participant: { select: { name: true, email: true } } },
+      orderBy: { submittedAt: 'desc' }
+    });
+
+    const submitted = assignments.filter((a) => a.status === 'SUBMITTED' || a.status === 'APPROVED');
+    const budgetBurned = submitted.reduce((sum, a) => sum + a.reward, 0);
+
+    res.json({
+      totalAssignments: assignments.length,
+      submittedCount: submitted.length,
+      budgetBurned,
+      assignments
+    });
+  } catch (error) {
+    console.error('Get task responses error:', error);
+    res.status(500).json({ message: 'Server error while fetching task responses' });
   }
 };
 
