@@ -201,8 +201,8 @@ const MapPicker = ({ onLocationsUpdate, initialLocations = [] }) => {
             <span className="text-[10px] font-black text-[#7f0df2] bg-purple-50 px-2 py-0.5 rounded-md">{radius}m</span>
           </div>
           <div className="h-11 flex items-center px-4 bg-slate-50 border border-slate-100 rounded-xl">
-            <input 
-              type="range" min="100" max="5000" step="100" 
+            <input
+              type="range" min="100" max="10000" step="100"
               value={radius} onChange={(e) => setRadius(parseInt(e.target.value))}
               className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#7f0df2]"
             />
