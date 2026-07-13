@@ -17,6 +17,8 @@ model User {
   role         Role
   avatar       String?
   balance      Float    @default(0.0)
+  homeLatitude  Float?
+  homeLongitude Float?
   createdAt    DateTime @default(now())
 
   // Relations
@@ -122,6 +124,7 @@ model TaskAssignment {
   reward        Float
   submittedAt   DateTime?
   validatedAt   DateTime?
+  responseData  Json?
 
   responses     TaskResponse[]
 

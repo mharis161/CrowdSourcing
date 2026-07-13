@@ -9,6 +9,7 @@ const app = express();
 
 import authRoutes from './routes/authRoute.js';
 import taskRoutes from './routes/taskRoute.js';
+import participantTaskRoutes from './routes/participantTaskRoute.js';
 
 app.use(cors());
 app.use(express.json());
@@ -16,6 +17,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/participant-tasks', participantTaskRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

@@ -41,3 +41,8 @@ export const companyOnly = (req, res, next) => {
     res.status(403).json({ message: 'Access denied: Companies only' });
   }
 };
+
+export const participantOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'PARTICIPANT') next();
+  else res.status(403).json({ message: 'Access denied: Participants only' });
+};
