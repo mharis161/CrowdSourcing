@@ -30,12 +30,20 @@ participant-facing API at all** yet. Follow existing conventions in
 `console.error`, `res.status(500).json({ message })`, Prisma `include`
 patterns, default-export `prisma` from `backend/lib/prisma.js`).
 
-1. **Schema**: add `responseData Json?` to `TaskAssignment` in
-   `prisma/schema.prisma` (stores the raw submitted survey answers — see
-   "why JSON not TaskQuestion rows" below). Apply with
-   `npx prisma generate && npx prisma db push --accept-data-loss`
-   (see `backend/scripts/run_prisma.js` — this project uses `db push`, not
-   `migrate`).
+1. **Schema**:
+   - Add `responseData Json?` to `TaskAssignment` in `prisma/schema.prisma`
+     (stores the raw submitted survey answers — see "why JSON not
+     TaskQuestion rows" below).
+   - Add a **parent location** to `User`: `homeLatitude Float?` and
+     `homeLongitude Float?`. This is the participant's fixed base location
+     (set once from their profile, not their live/current GPS — current
+     device location is deliberately *not* trusted for task matching since
+     it can be anything at request time). Only meaningful for
+     `PARTICIPANT` users, but a plain nullable field on `User` is simplest;
+     don't split into a separate model for this.
+   - Apply with `npx prisma generate && npx prisma db push --accept-data-loss`
+     (see `backend/scripts/run_prisma.js` — this project uses `db push`, not
+     `migrate`).
 
 2. **Auth guard**: add to `backend/middleware/authMiddleware.js`:
    ```js
@@ -46,22 +54,35 @@ patterns, default-export `prisma` from `backend/lib/prisma.js`).
    ```
 
 3. **New controller** `backend/controllers/participantTaskController.js`:
-   - `getAvailableTasks` — `Task.findMany({ where: { status: 'ACTIVE' }, include: { locations: true, company: { select: { companyName: true } } } })`, excluding tasks the current user already has a `TaskAssignment` for. If `lat`/`lng` query params are given, compute Haversine distance in JS against each task's locations, attach `distanceKm`, sort by it (no PostGIS in this DB — do it in Node).
+   - `updateHomeLocation` (`PATCH /profile/location`, body `{ latitude, longitude }`) — sets `req.user`'s `homeLatitude`/`homeLongitude`. Called once during onboarding and any time the participant wants to change their base location from their profile screen; not part of every request.
+   - `getAvailableTasks` — **hard-filtered by the participant's stored home location, not live GPS**. Logic:
+     1. If `req.user.homeLatitude`/`homeLongitude` are null, return an empty list with a message like `"Set your location in your profile to see available tasks"` — don't guess a location.
+     2. Otherwise `Task.findMany({ where: { status: 'ACTIVE' }, include: { locations: true, company: { select: { companyName: true } } } })`, excluding tasks the current user already has a `TaskAssignment` for.
+     3. For each task, compute the Haversine distance (in meters, to match `TaskLocation.radius`'s unit — see note below) from the participant's home location to *each* of the task's `TaskLocation` rows. Keep the task only if **at least one** of its locations has `distance <= that location's own radius` — each task location's radius is company-set per task (already exists, see `TaskLocation.radius` and `frontend/src/components/MapPicker.jsx`'s radius slider), there is no separate global radius constant.
+     4. Sort surviving tasks by their nearest matching location's distance, attach `distanceKm` per task for display.
+     No PostGIS in this DB — do the distance math and filtering in Node.
    - `acceptTask` (`POST /:id/accept`) — 404 if task missing/not ACTIVE; 409 if `maxParticipants` already reached; otherwise create a `TaskAssignment` (`status: IN_PROGRESS`, `reward: task.reward`); rely on the existing `@@unique([taskId, participantId])` constraint to reject double-accepts (catch and return 409).
    - `getMyAssignments` — assignments for `req.user.id`, `include: { task: { include: { locations: true } } }`, optional `?status=` filter.
    - `getAssignmentById` — ownership-checked single assignment with its task (need `task.surveyConfig` for the perform screen).
    - `submitAssignment` (`POST /assignments/:id/submit`, body `{ responseData }`) — ownership check, reject if not `IN_PROGRESS`, then set `responseData`, `status: 'SUBMITTED'`, `submittedAt: new Date()`.
+
+   **Unit note**: `TaskLocation.radius` is stored in **meters** (the web
+   app's slider in `MapPicker.jsx` goes from 100 to 5000, labeled `{radius}m`
+   — company sets this per task location, it is *not* a fixed 5km/10km
+   constant anywhere in code). Keep your distance calculation in meters to
+   match directly; only convert to km for display (`distanceKm`).
 
 4. **New routes** `backend/routes/participantTaskRoute.js`, mounted at a
    **separate base path** `/api/participant-tasks` (not `/api/tasks` —
    avoids Express route-ordering collisions with the existing company
    routes):
    ```
-   GET  /available
-   POST /:id/accept
-   GET  /my-assignments
-   GET  /assignments/:id
-   POST /assignments/:id/submit
+   PATCH /profile/location
+   GET   /available
+   POST  /:id/accept
+   GET   /my-assignments
+   GET   /assignments/:id
+   POST  /assignments/:id/submit
    ```
    All guarded by `protect, participantOnly`. Register in `backend/server.js`
    next to the existing `app.use('/api/tasks', taskRoutes)`.
@@ -92,6 +113,30 @@ response body is a **flat** object: `{ ...userFieldsMinusPassword, token }`
   use `10.0.2.2`, for a physical device use the host machine's LAN IP or the
   deployed server address if one exists — make this configurable, don't
   hardcode `localhost`.
+
+### Parent location (new — required before "Available Tasks" works at all)
+
+The available-tasks list is hard-filtered server-side by the participant's
+stored **home location**, not live GPS (current device location is
+deliberately not trusted for matching — see Part 1). So the app needs a
+one-time "set your location" step, and a way to change it later:
+
+- Add a location step to onboarding (right after registration, before the
+  home screen) and a re-editable entry point from the profile screen. Offer
+  **both** input methods, participant's choice:
+  1. **Drop a pin on a map** — same idea as the web app's company-side
+     `MapPicker.jsx` (pick a point, no radius needed here since this is the
+     participant's point, not a zone).
+  2. **Capture current device GPS once** — via `geolocator`, used as a
+     one-time snapshot to set the field, not continuous tracking.
+- On either method, call `PATCH /api/participant-tasks/profile/location`
+  with `{ latitude, longitude }`.
+- If the participant skips this or the profile has no location yet, the
+  Available Tasks tab should show an empty state prompting them to set a
+  location (matches the backend's behavior of returning an empty list until
+  `homeLatitude`/`homeLongitude` are set) rather than erroring.
+- Each task card should show its distance (`distanceKm`, returned by the
+  API) from this stored home location.
 - Map the real response shapes above onto whatever models the mock layer
   already defined; adjust model fields if the mock guessed wrong rather than
   contorting the API.
@@ -143,12 +188,16 @@ asset swap instead of something that silently changes behind a link.
   `assets/survey/`, re-test. Never point the WebView at a CDN URL for these.
 
 ## Verification
-- Backend: register a `PARTICIPANT` test user, walk
+- Backend: register a `PARTICIPANT` test user, set their home location via
+  `PATCH /profile/location`, create a company task (via the web app) with a
+  `TaskLocation` inside that radius, then walk
   `available → accept → my-assignments → assignments/:id → submit` via
-  curl/Postman, confirm `TaskAssignment.responseData`/`status` update
-  correctly in Postgres.
-- Flutter: run the app, log in with a real participant account, browse
-  available tasks (real data, not mock), accept one, perform a survey that
+  curl/Postman — confirm the task actually shows up in `available` (and
+  that a task *outside* the radius correctly does not), and that
+  `TaskAssignment.responseData`/`status` update correctly in Postgres.
+- Flutter: run the app, log in with a real participant account, set a home
+  location via the new onboarding step, browse available tasks (real data,
+  not mock, correctly distance-filtered), accept one, perform a survey that
   includes a gpslocation question (confirm GPS actually gets captured and
   shows up in the submitted `responseData`), submit, and confirm the
   assignment shows `SUBMITTED` in the database with the real answers.
