@@ -21,6 +21,14 @@ model User {
   homeLongitude Float?
   createdAt    DateTime @default(now())
 
+  // Participant-only profile details — set via the mobile app's Profile
+  // screen after registration, never collected at signup.
+  dateOfBirth  DateTime?
+  gender       Gender?
+  country      String?
+  state        String?
+  city         String?
+
   // Relations
   company      Company?
   assignments  TaskAssignment[]
@@ -32,6 +40,13 @@ enum Role {
   PARTICIPANT
   COMPANY
   ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
 }
 
 model Company {

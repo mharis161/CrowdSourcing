@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   updateHomeLocation,
+  updateProfileDetails,
   getAvailableTasks,
   acceptTask,
   getMyAssignments,
@@ -12,6 +13,7 @@ import { protect, participantOnly } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.patch('/profile/location', protect, participantOnly, updateHomeLocation);
+router.patch('/profile/details', protect, participantOnly, updateProfileDetails);
 router.get('/available', protect, participantOnly, getAvailableTasks);
 router.post('/:id/accept', protect, participantOnly, acceptTask);
 router.get('/my-assignments', protect, participantOnly, getMyAssignments);

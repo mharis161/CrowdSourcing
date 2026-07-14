@@ -38,6 +38,41 @@ export const updateHomeLocation = async (req, res) => {
   }
 };
 
+const ALLOWED_GENDERS = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'];
+
+export const updateProfileDetails = async (req, res) => {
+  try {
+    const { dateOfBirth, gender, country, state, city } = req.body;
+
+    if (gender !== undefined && gender !== null && !ALLOWED_GENDERS.includes(gender)) {
+      return res.status(400).json({ message: 'Invalid gender value' });
+    }
+
+    const data = {};
+    if (dateOfBirth !== undefined) data.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+    if (gender !== undefined) data.gender = gender;
+    if (country !== undefined) data.country = country;
+    if (state !== undefined) data.state = state;
+    if (city !== undefined) data.city = city;
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data
+    });
+
+    res.json({
+      dateOfBirth: user.dateOfBirth,
+      gender: user.gender,
+      country: user.country,
+      state: user.state,
+      city: user.city
+    });
+  } catch (error) {
+    console.error('Update profile details error:', error);
+    res.status(500).json({ message: 'Server error while updating profile details' });
+  }
+};
+
 export const getAvailableTasks = async (req, res) => {
   try {
     const { homeLatitude, homeLongitude } = req.user;
