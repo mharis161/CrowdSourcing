@@ -88,10 +88,16 @@ export const getAvailableTasks = async (req, res) => {
     });
     const assignedTaskIds = existingAssignments.map((a) => a.taskId);
 
+    const now = new Date();
+
     const tasks = await prisma.task.findMany({
       where: {
         status: 'ACTIVE',
-        id: { notIn: assignedTaskIds }
+        id: { notIn: assignedTaskIds },
+        // Tasks that have already ended are fully closed — don't list them.
+        // Tasks with a future startDate are still listed (with canAccept: false)
+        // so participants can see what's coming and how long until it opens.
+        OR: [{ endDate: null }, { endDate: { gt: now } }]
       },
       include: taskInclude,
       orderBy: { createdAt: 'desc' }
@@ -109,7 +115,11 @@ export const getAvailableTasks = async (req, res) => {
           .filter((d) => d.meters <= d.radius);
         if (distances.length === 0) return null;
         const nearestMeters = Math.min(...distances.map((d) => d.meters));
-        return { ...task, distanceKm: nearestMeters / 1000 };
+        return {
+          ...task,
+          distanceKm: nearestMeters / 1000,
+          canAccept: !task.startDate || task.startDate <= now
+        };
       })
       .filter(Boolean);
 
@@ -129,6 +139,14 @@ export const acceptTask = async (req, res) => {
     const task = await prisma.task.findUnique({ where: { id } });
     if (!task || task.status !== 'ACTIVE') {
       return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const now = new Date();
+    if (task.startDate && now < task.startDate) {
+      return res.status(400).json({ message: 'This task has not started yet' });
+    }
+    if (task.endDate && now > task.endDate) {
+      return res.status(400).json({ message: 'This task has already ended' });
     }
 
     const acceptedCount = await prisma.taskAssignment.count({ where: { taskId: id } });

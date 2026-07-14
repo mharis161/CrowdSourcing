@@ -61,7 +61,8 @@ patterns, default-export `prisma` from `backend/lib/prisma.js`).
      3. For each task, compute the Haversine distance (in meters, to match `TaskLocation.radius`'s unit — see note below) from the participant's home location to *each* of the task's `TaskLocation` rows. Keep the task only if **at least one** of its locations has `distance <= that location's own radius` — each task location's radius is company-set per task (already exists, see `TaskLocation.radius` and `frontend/src/components/MapPicker.jsx`'s radius slider), there is no separate global radius constant.
      4. Sort surviving tasks by their nearest matching location's distance, attach `distanceKm` per task for display.
      No PostGIS in this DB — do the distance math and filtering in Node.
-   - `acceptTask` (`POST /:id/accept`) — 404 if task missing/not ACTIVE; 409 if `maxParticipants` already reached; otherwise create a `TaskAssignment` (`status: IN_PROGRESS`, `reward: task.reward`); rely on the existing `@@unique([taskId, participantId])` constraint to reject double-accepts (catch and return 409).
+     5. **Start/end date window**: `Task` has nullable `startDate`/`endDate`. Tasks whose `endDate` has already passed are excluded entirely (fully closed, not shown at all). Tasks with a future `startDate` **are still included** — attach `canAccept: !task.startDate || task.startDate <= now` per task so the UI can show it with a "starts in …" countdown and a disabled Accept button until then.
+   - `acceptTask` (`POST /:id/accept`) — 404 if task missing/not ACTIVE; 400 if `now < task.startDate` ("This task has not started yet") or `now > task.endDate` ("This task has already ended"); 409 if `maxParticipants` already reached; otherwise create a `TaskAssignment` (`status: IN_PROGRESS`, `reward: task.reward`); rely on the existing `@@unique([taskId, participantId])` constraint to reject double-accepts (catch and return 409). Note: `submitAssignment` deliberately does **not** re-check `endDate` — a participant who already accepted before the end date keeps a grace period to submit even after it passes.
    - `getMyAssignments` — assignments for `req.user.id`, `include: { task: { include: { locations: true } } }`, optional `?status=` filter.
    - `getAssignmentById` — ownership-checked single assignment with its task (need `task.surveyConfig` for the perform screen).
    - `submitAssignment` (`POST /assignments/:id/submit`, body `{ responseData }`) — ownership check, reject if not `IN_PROGRESS`, then set `responseData`, `status: 'SUBMITTED'`, `submittedAt: new Date()`.
@@ -137,6 +138,12 @@ one-time "set your location" step, and a way to change it later:
   `homeLatitude`/`homeLongitude` are set) rather than erroring.
 - Each task card should show its distance (`distanceKm`, returned by the
   API) from this stored home location.
+- Each task card also carries `canAccept`, `startDate`, `endDate`. When
+  `canAccept` is `false` (task's `startDate` is in the future), show a
+  countdown ("Starts in 2 days") and disable the Accept action instead of
+  hiding the card — the participant should be able to see what's coming.
+  Once `startDate` passes the card becomes acceptable without any client
+  action needed (just re-fetch or recompute against the current time).
 - Map the real response shapes above onto whatever models the mock layer
   already defined; adjust model fields if the mock guessed wrong rather than
   contorting the API.

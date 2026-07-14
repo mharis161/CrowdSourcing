@@ -103,7 +103,8 @@ const CompanyDashboard = () => {
         type: freshTask.type,
         budget: freshTask.reward * freshTask.maxParticipants,
         maxParticipants: freshTask.maxParticipants,
-        deadline: freshTask.deadline ? new Date(freshTask.deadline).toISOString().split('T')[0] : ''
+        startDate: freshTask.startDate ? new Date(freshTask.startDate).toISOString().split('T')[0] : '',
+        endDate: freshTask.endDate ? new Date(freshTask.endDate).toISOString().split('T')[0] : ''
       });
       // Load existing locations onto the map
       setLocations(freshTask.locations || []); 
@@ -118,7 +119,7 @@ const CompanyDashboard = () => {
 
   const handleOpenNewModal = () => {
     setEditingTaskId(null);
-    reset({ title: '', description: '', type: 'SURVEY', budget: '', maxParticipants: '', deadline: '' });
+    reset({ title: '', description: '', type: 'SURVEY', budget: '', maxParticipants: '', startDate: '', endDate: '' });
     setLocations([]);
     setSurveyConfig(null);
     setIsModalOpen(true);
@@ -468,10 +469,29 @@ const CompanyDashboard = () => {
                       {errors.maxParticipants && <span className="text-red-500 text-[10px] font-bold">{errors.maxParticipants.message}</span>}
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deadline</label>
-                      <input {...register('deadline')} type="date" className="w-full h-12 bg-white border border-slate-200 rounded-xl px-4 text-xs font-bold outline-none cursor-pointer shadow-sm" />
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Start Date</label>
+                      <input {...register('startDate')} type="date" className="w-full h-12 bg-white border border-slate-200 rounded-xl px-4 text-xs font-bold outline-none cursor-pointer shadow-sm" />
+                      <p className="text-[9px] text-slate-400 pl-1">Left blank = starts immediately</p>
                     </div>
                     <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">End Date</label>
+                      <input
+                        {...register('endDate', {
+                          validate: (value) => {
+                            const start = watch('startDate');
+                            if (value && start && new Date(value) <= new Date(start)) {
+                              return 'End date must be after start date';
+                            }
+                            return true;
+                          }
+                        })}
+                        type="date"
+                        className={`w-full h-12 bg-white border ${errors.endDate ? 'border-red-400' : 'border-slate-200'} rounded-xl px-4 text-xs font-bold outline-none cursor-pointer shadow-sm`}
+                      />
+                      {errors.endDate && <span className="text-red-500 text-[10px] font-bold">{errors.endDate.message}</span>}
+                      <p className="text-[9px] text-slate-400 pl-1">Task locks for new responses once this passes</p>
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Reward Per Response</label>
                       <div className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 flex items-center text-sm font-black text-slate-900">
                         {formatCurrency(rewardPerResponse, user?.company?.country)}

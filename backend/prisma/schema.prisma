@@ -77,7 +77,8 @@ model Task {
   reward          Float
   maxParticipants Int
   status          TaskStatus @default(DRAFT)
-  deadline        DateTime?
+  startDate       DateTime?
+  endDate         DateTime?
   surveyConfig    Json?
   createdAt       DateTime @default(now())
   

@@ -3,13 +3,14 @@ import { runQA } from '../services/qaService.js';
 
 export const createTask = async (req, res) => {
   try {
-    const { 
-      title, 
-      description, 
-      type, 
-      reward, 
-      maxParticipants, 
-      deadline,
+    const {
+      title,
+      description,
+      type,
+      reward,
+      maxParticipants,
+      startDate,
+      endDate,
       locations,
       surveyConfig
     } = req.body;
@@ -22,6 +23,10 @@ export const createTask = async (req, res) => {
       return res.status(400).json({ message: 'At least one location is required' });
     }
 
+    if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+      return res.status(400).json({ message: 'End date must be after start date' });
+    }
+
     const task = await prisma.task.create({
       data: {
         title,
@@ -29,7 +34,8 @@ export const createTask = async (req, res) => {
         type,
         reward: parseFloat(reward),
         maxParticipants: parseInt(maxParticipants),
-        deadline: deadline ? new Date(deadline) : null,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
         companyId: req.user.company.id,
         status: 'ACTIVE',
         surveyConfig: surveyConfig || null,
@@ -97,7 +103,7 @@ export const updateTaskStatus = async (req, res) => {
 export const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, type, reward, maxParticipants, deadline, locations, surveyConfig } = req.body;
+    const { title, description, type, reward, maxParticipants, startDate, endDate, locations, surveyConfig } = req.body;
 
     // Verify task belongs to this company
     const task = await prisma.task.findFirst({
@@ -106,6 +112,10 @@ export const updateTask = async (req, res) => {
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+      return res.status(400).json({ message: 'End date must be after start date' });
     }
 
     // Update task
@@ -117,7 +127,8 @@ export const updateTask = async (req, res) => {
         type,
         reward: reward ? parseFloat(reward) : undefined,
         maxParticipants: maxParticipants ? parseInt(maxParticipants) : undefined,
-        deadline: deadline ? new Date(deadline) : null,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
         surveyConfig: surveyConfig !== undefined ? surveyConfig : undefined,
       }
     });
