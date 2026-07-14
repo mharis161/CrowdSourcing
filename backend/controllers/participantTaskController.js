@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js';
+import { runQA } from '../services/qaService.js';
 
 const taskInclude = {
   locations: true,
@@ -220,6 +221,13 @@ export const submitAssignment = async (req, res) => {
       },
       include: { task: { include: taskInclude } }
     });
+
+    // Best-effort automatic QA — a failure here must not fail the participant's submit.
+    try {
+      await runQA(assignment.taskId, id);
+    } catch (qaError) {
+      console.error('Automatic QA run failed:', qaError);
+    }
 
     res.json(updated);
   } catch (error) {

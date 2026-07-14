@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js';
+import { runQA } from '../services/qaService.js';
 
 export const createTask = async (req, res) => {
   try {
@@ -170,7 +171,8 @@ export const getTaskResponses = async (req, res) => {
 
     // Verify task belongs to this company
     const task = await prisma.task.findFirst({
-      where: { id, companyId: req.user.company.id }
+      where: { id, companyId: req.user.company.id },
+      include: { locations: true }
     });
 
     if (!task) {
@@ -187,6 +189,7 @@ export const getTaskResponses = async (req, res) => {
     const budgetBurned = submitted.reduce((sum, a) => sum + a.reward, 0);
 
     res.json({
+      task,
       totalAssignments: assignments.length,
       submittedCount: submitted.length,
       budgetBurned,
@@ -195,6 +198,66 @@ export const getTaskResponses = async (req, res) => {
   } catch (error) {
     console.error('Get task responses error:', error);
     res.status(500).json({ message: 'Server error while fetching task responses' });
+  }
+};
+
+export const runAssignmentQA = async (req, res) => {
+  try {
+    const { id, assignmentId } = req.params;
+
+    const task = await prisma.task.findFirst({
+      where: { id, companyId: req.user.company.id }
+    });
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const assignment = await prisma.taskAssignment.findFirst({
+      where: { id: assignmentId, taskId: id }
+    });
+    if (!assignment) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+
+    const updated = await runQA(id, assignmentId);
+    res.json(updated);
+  } catch (error) {
+    console.error('Run assignment QA error:', error);
+    res.status(500).json({ message: 'Server error while running QA' });
+  }
+};
+
+export const reviewAssignment = async (req, res) => {
+  try {
+    const { id, assignmentId } = req.params;
+    const { status } = req.body;
+
+    if (!['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ message: "status must be 'APPROVED' or 'REJECTED'" });
+    }
+
+    const task = await prisma.task.findFirst({
+      where: { id, companyId: req.user.company.id }
+    });
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const assignment = await prisma.taskAssignment.findFirst({
+      where: { id: assignmentId, taskId: id }
+    });
+    if (!assignment) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+
+    const updated = await prisma.taskAssignment.update({
+      where: { id: assignmentId },
+      data: { status, validatedAt: new Date() }
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error('Review assignment error:', error);
+    res.status(500).json({ message: 'Server error while reviewing assignment' });
   }
 };
 

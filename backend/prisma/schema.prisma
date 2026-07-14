@@ -141,6 +141,12 @@ model TaskAssignment {
   validatedAt   DateTime?
   responseData  Json?
 
+  qaStatus      QAStatus  @default(NOT_RUN)
+  qaFlags       Json?
+  qaSummary     String?
+  qaScore       Float?
+  qaRunAt       DateTime?
+
   responses     TaskResponse[]
 
   @@unique([taskId, participantId])
@@ -151,6 +157,13 @@ enum AssignmentStatus {
   SUBMITTED
   APPROVED
   REJECTED
+}
+
+enum QAStatus {
+  NOT_RUN
+  PASSED
+  FLAGGED
+  FAILED
 }
 
 model TaskResponse {
