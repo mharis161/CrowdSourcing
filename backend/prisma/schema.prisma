@@ -138,8 +138,10 @@ model TaskAssignment {
   participant   User     @relation(fields: [participantId], references: [id])
   status        AssignmentStatus @default(IN_PROGRESS)
   reward        Float
+  acceptedAt    DateTime  @default(now())
   submittedAt   DateTime?
-  validatedAt   DateTime?
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
   responseData  Json?
 
   qaStatus      QAStatus  @default(NOT_RUN)

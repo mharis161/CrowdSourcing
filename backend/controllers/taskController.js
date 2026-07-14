@@ -263,7 +263,9 @@ export const reviewAssignment = async (req, res) => {
 
     const updated = await prisma.taskAssignment.update({
       where: { id: assignmentId },
-      data: { status, validatedAt: new Date() }
+      data: status === 'APPROVED'
+        ? { status, approvedAt: new Date() }
+        : { status, rejectedAt: new Date() }
     });
     res.json(updated);
   } catch (error) {

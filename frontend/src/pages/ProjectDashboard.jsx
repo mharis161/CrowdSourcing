@@ -344,6 +344,14 @@ const ProjectDashboard = () => {
                               {isExpanded && (
                                 <tr>
                                   <td colSpan={5} className="px-6 py-5 bg-slate-50/50 space-y-4">
+                                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-slate-500">
+                                      <span><span className="font-bold text-slate-700">Accepted:</span> {formatRelativeTime(a.acceptedAt)}</span>
+                                      <span><span className="font-bold text-slate-700">Submitted:</span> {formatRelativeTime(a.submittedAt)}</span>
+                                      <span><span className="font-bold text-slate-700">QA Run:</span> {formatRelativeTime(a.qaRunAt)}</span>
+                                      {a.approvedAt && <span><span className="font-bold text-emerald-600">Approved:</span> {formatRelativeTime(a.approvedAt)}</span>}
+                                      {a.rejectedAt && <span><span className="font-bold text-red-600">Rejected:</span> {formatRelativeTime(a.rejectedAt)}</span>}
+                                    </div>
+
                                     {a.responseData ? (
                                       <div className="space-y-1">
                                         {Object.entries(a.responseData).map(([key, value]) => (
