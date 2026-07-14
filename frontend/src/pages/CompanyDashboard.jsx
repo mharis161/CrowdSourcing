@@ -50,48 +50,6 @@ const CompanyDashboard = () => {
   
   const [editingTaskId, setEditingTaskId] = useState(null);
   const selectedTask = tasks.find(t => t.id === editingTaskId);
-  const [liveDataTask, setLiveDataTask] = useState(null);
-  const [taskResponses, setTaskResponses] = useState(null);
-  const [responsesLoading, setResponsesLoading] = useState(false);
-  const [expandedAssignmentId, setExpandedAssignmentId] = useState(null);
-
-  useEffect(() => {
-    if (!liveDataTask) {
-      setTaskResponses(null);
-      setExpandedAssignmentId(null);
-      return;
-    }
-    setResponsesLoading(true);
-    api.get(`/tasks/${liveDataTask.id}/responses`)
-      .then(res => setTaskResponses(res.data))
-      .catch(err => {
-        console.error('Failed to fetch task responses:', err);
-        showToast('Failed to load submission data.', 'error');
-      })
-      .finally(() => setResponsesLoading(false));
-  }, [liveDataTask]);
-
-  const formatRelativeTime = (dateString) => {
-    if (!dateString) return '—';
-    const diffMs = Date.now() - new Date(dateString).getTime();
-    const mins = Math.floor(diffMs / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} hr${hours === 1 ? '' : 's'} ago`;
-    const days = Math.floor(hours / 24);
-    return `${days} day${days === 1 ? '' : 's'} ago`;
-  };
-
-  const questionTitleMap = (surveyConfigJson) => {
-    const map = {};
-    (surveyConfigJson?.pages || []).forEach(page => {
-      (page.elements || []).forEach(el => {
-        map[el.name] = el.title || el.name;
-      });
-    });
-    return map;
-  };
 
   const [surveyConfig, setSurveyConfig] = useState(null);
   const [isSurveyBuilderOpen, setIsSurveyBuilderOpen] = useState(false);
@@ -373,16 +331,16 @@ const CompanyDashboard = () => {
                         </td>
                         <td className="px-6 py-5 text-right pr-8">
                           <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={() => setLiveDataTask(task)} 
+                            <Link
+                              to={`/dashboard/company/projects/${task.id}`}
                               className="group relative p-1.5 rounded-lg text-slate-400 hover:text-[#7f0df2] hover:bg-purple-50 transition-colors"
                             >
                               <BarChart className="w-4 h-4" />
                                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[10px] font-bold rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                  View Live Data
+                                  Project Dashboard
                                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
                                 </div>
-                              </button>
+                              </Link>
                               {task.type === 'SURVEY' && (
                                 <button 
                                   onClick={() => {
@@ -561,109 +519,6 @@ const CompanyDashboard = () => {
                </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Live Data Modal */}
-      {liveDataTask && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[4px] animate-in fade-in duration-300">
-           <div className="bg-white rounded-[2rem] w-full max-w-4xl p-8 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300 relative border border-slate-100">
-             <button onClick={() => setLiveDataTask(null)} className="absolute right-6 top-6 p-2 bg-slate-50 hover:bg-red-50 hover:text-red-500 rounded-full transition-all">
-                <X className="w-4 h-4 text-slate-400 cursor-pointer" />
-             </button>
-             <div className="flex items-center gap-3 mb-6 shrink-0">
-                <div className="bg-purple-100 p-3 rounded-2xl">
-                   <BarChart className="text-[#7f0df2] w-6 h-6" />
-                </div>
-                <div>
-                   <h2 className="text-2xl font-black text-slate-900 tracking-tight">Submissions: {liveDataTask.title}</h2>
-                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                     {responsesLoading ? 'Loading real submission data…' : 'Live data from participant submissions'}
-                   </p>
-                </div>
-             </div>
-             <div className="grid grid-cols-3 gap-6 mb-8 shrink-0">
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Submissions</p>
-                   <p className="text-3xl font-black text-slate-900">{taskResponses ? taskResponses.submittedCount : '—'}</p>
-                </div>
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Accepted (of Total)</p>
-                   <p className="text-3xl font-black text-emerald-500">{taskResponses ? `${taskResponses.submittedCount}/${liveDataTask.maxParticipants}` : '—'}</p>
-                </div>
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Budget Burned</p>
-                   <p className="text-3xl font-black text-orange-500">{formatCurrency(taskResponses?.budgetBurned || 0, user?.company?.country)}</p>
-                </div>
-             </div>
-
-             <div className="border border-slate-200 rounded-2xl overflow-y-auto flex-1">
-                <table className="w-full text-left">
-                  <thead className="sticky top-0 bg-slate-50">
-                    <tr className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                      <th className="px-6 py-4">Participant</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Submitted</th>
-                      <th className="px-6 py-4">Reward</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {!taskResponses || taskResponses.assignments.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-10 text-center text-xs font-bold text-slate-400 italic">
-                          {responsesLoading ? 'Loading…' : 'No participants have accepted this task yet.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      taskResponses.assignments.map((a) => {
-                        const isExpanded = expandedAssignmentId === a.id;
-                        const titles = questionTitleMap(liveDataTask.surveyConfig);
-                        const statusStyle = {
-                          IN_PROGRESS: 'bg-amber-50 text-amber-600',
-                          SUBMITTED: 'bg-blue-50 text-blue-600',
-                          APPROVED: 'bg-emerald-50 text-emerald-600',
-                          REJECTED: 'bg-red-50 text-red-600'
-                        }[a.status] || 'bg-slate-100 text-slate-500';
-                        return (
-                          <React.Fragment key={a.id}>
-                            <tr
-                              className="hover:bg-slate-50 cursor-pointer"
-                              onClick={() => setExpandedAssignmentId(isExpanded ? null : a.id)}
-                            >
-                              <td className="px-6 py-4">
-                                <span className="text-xs font-bold text-slate-800">{a.participant?.name || 'Unknown'}</span>
-                                <span className="block text-[10px] text-slate-400">{a.participant?.email}</span>
-                              </td>
-                              <td className="px-6 py-4"><span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase ${statusStyle}`}>{a.status.replace('_', ' ')}</span></td>
-                              <td className="px-6 py-4"><span className="text-xs font-bold text-slate-500">{formatRelativeTime(a.submittedAt)}</span></td>
-                              <td className="px-6 py-4"><span className="text-xs font-bold text-emerald-600">{formatCurrency(a.reward, user?.company?.country)}</span></td>
-                            </tr>
-                            {isExpanded && (
-                              <tr>
-                                <td colSpan={4} className="px-6 py-4 bg-slate-50/50">
-                                  {a.responseData ? (
-                                    <div className="space-y-2">
-                                      {Object.entries(a.responseData).map(([key, value]) => (
-                                        <div key={key} className="text-xs">
-                                          <span className="font-bold text-slate-500">{titles[key] || key}: </span>
-                                          <span className="font-bold text-slate-800">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs italic text-slate-400">Not submitted yet.</span>
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-             </div>
-           </div>
         </div>
       )}
 

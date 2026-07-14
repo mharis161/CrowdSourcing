@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import TaskerDashboard from './pages/TaskerDashboard';
 import CompanyDashboard from './pages/CompanyDashboard';
 import WalletPage from './pages/WalletPage';
+import ProjectDashboard from './pages/ProjectDashboard';
 import ToastContainer from './components/ToastContainer';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/dashboard/tasker" element={<TaskerDashboard />} />
         <Route path="/dashboard/company" element={<CompanyDashboard />} />
+        <Route path="/dashboard/company/projects/:taskId" element={<ProjectDashboard />} />
         <Route path="/wallet" element={<WalletPage />} />
       </Routes>
       <ToastContainer />
